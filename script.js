@@ -13,7 +13,7 @@ const table = document.querySelector('#table');
 // Url
 
 const link = 'https://crudcrud.com/api/';
-const id = '94432c400d054fc8abf26c17876fdfc6';
+const id = 'eafe78f255904fd4ad1483205f8e162d';
 const route = '/Inventory';
 const url = link + id + route;
 
@@ -23,13 +23,10 @@ const url = link + id + route;
 // On refresh
 
 window.addEventListener('DOMContentLoaded', onRefresh);
-async function onRefresh(e) {
-    try {
-        const res = await axios.get(url);
+function onRefresh(e) {
+    axios.get(url).then(res => {
         for(item of res.data) addItem(item);
-    } catch (error) {
-        console.log(error.message);
-    }
+    }).catch(e => console.log(e.message));
 }
 
 
@@ -38,25 +35,16 @@ async function onRefresh(e) {
 // Add Items
 
 form.addEventListener('submit', onSubmit);
-async function onSubmit(e) {
+function onSubmit(e) {
     e.preventDefault();
-    const itemObj = {
+    const obj = {
         name : formName.value,
         description : formDes.value,
         price : formPrice.value,
         quantity : formQuant.value,
     }
-    const data = await storeOnServer(itemObj);
-    if(id) addItem(data, itemObj)
-}
-
-async function storeOnServer(obj) {
-    try {
-        const res =  await axios.post(url, obj);
-        return res.data;
-    } catch (error) {
-        console.log(error.message);
-    }
+    axios.post(url, obj).then(res => addItem(res.data))
+     .catch(e => console.log(e.message));
 }
 
 
@@ -68,45 +56,41 @@ table.addEventListener('click', updateQuant);
 function updateQuant(e) {
     if(e.target.tagName !== 'BUTTON') return;
     const text = e.target.textContent
-    const row = e.target.parentElement.parentElement;
     const amount = parseInt(text.charAt(text.length - 1));
+    const row = e.target.parentElement.parentElement;
     const id = row.getAttribute('data-id');
-    const obj = JSON.parse(row.getAttribute('data-obj'));
-    obj.quantity -= amount;
-    row.setAttribute('data-obj', JSON.stringify(obj));
-    updateOnServer(id, obj);
+    const obj = {
+        name : row.children[0].textContent,
+        description : row.children[1].textContent,
+        price : row.children[2].textContent,
+        quantity : row.children[3].textContent - amount,
+    }
+    axios.put(url + "/" + id, obj)
+     .then(() => row.children[3].textContent = parseInt(row.children[3].textContent) - amount)
+     .catch(error => console.log(error.message));
 }
 
-async function updateOnServer(id, obj) {
-    try {
-        await axios.put(url + "/" + id, obj);
-    } catch (error) {
-        console.log(error.message);
-    }
-}
+
+
 
 // Utility functions
 
 function addItem(data) {
     const row = addElement('tr', table);
-    const name = addElement('th', row, data.name);
-    const des = addElement('th', row, data.description);
-    const price = addElement('th', row, data.price);
-    const qunt = addElement('th', row, data.quantity);
+    addMultipleElement('th', row, data.name, data.description, data.price, data.quantity);
     const buy = addElement('th', row);
-    const buy1 = addElement('button', buy, 'Buy 1');
-    const buy2 = addElement('button', buy, 'Buy 2');
-    const buy3 = addElement('button', buy, 'Buy 3');
+    addMultipleElement('button', buy, 'Buy 1', 'buy 2', 'buy 3');
     row.setAttribute('data-id', data._id);
-    delete data._id;
-    row.setAttribute('data-obj', JSON.stringify(data));
-    const obj = row.getAttribute('data-obj');
 }
 
 function addElement(type, parent, text, ...classes) {
     const element = document.createElement(type);
+    parent.append(element);
     classes.forEach(c => element.classList.add(c));
     if(text) element.textContent = text;
-    parent.append(element);
     return element;
+}
+
+function addMultipleElement(type, parent, ...texts) {
+    texts.forEach(x => addElement(type, parent, x));
 }
